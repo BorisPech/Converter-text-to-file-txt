@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Text → .txt Converter</title>
+<meta name="description" content="A simple, private tool to convert typed or pasted text into a downloadable .txt file — entirely in your browser." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232C5347'/%3E%3Cpath d='M8 7h8M8 12h8M8 17h5' stroke='%23FDFDFB' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #14181F;
+    --ink-soft: #3A4048;
+    --muted: #6B7066;
+    --paper: #EAEBE4;
+    --paper-alt: #E1E3D9;
+    --card: #FDFDFB;
+    --line: #D9DBD0;
+    --pine: #2C5347;
+    --pine-dark: #1F3D34;
+    --gold: #C68A2E;
+    --gold-dark: #A8721F;
+    --brick: #9B3B2E;
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background:
+      radial-gradient(circle at 1px 1px, rgba(20,24,31,0.05) 1px, transparent 0) 0 0/22px 22px,
+      radial-gradient(120% 140% at 50% -10%, #F1F2EC 0%, var(--paper) 60%);
+    color: var(--ink-soft);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 56px 20px 64px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { width: 100%; max-width: 620px; }
+
+  .intro { margin-bottom: 34px; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--pine);
+    margin: 0 0 14px;
+    font-weight: 500;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 38px);
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    margin: 0 0 12px;
+  }
+
+  .subhead { font-size: 16px; color: var(--ink-soft); max-width: 46ch; margin: 0; }
+
+  main.card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 30px 30px 26px;
+    margin-top: 34px;
+    box-shadow: 0 1px 2px rgba(20,24,31,0.04), 0 20px 40px -24px rgba(20,24,31,0.28);
+    opacity: 0;
+    transform: translateY(10px);
+    animation: rise 0.55s ease-out forwards;
+  }
+
+  .folder-tab {
+    position: absolute;
+    top: -23px;
+    left: 28px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 6px 14px 17px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .step { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+
+  .step-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 19px;
+    height: 19px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .step-label {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .field { margin-bottom: 6px; }
+
+  textarea {
+    width: 100%;
+    min-height: 168px;
+    resize: vertical;
+    padding: 14px 16px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+
+  textarea::placeholder { color: #94978C; }
+
+  textarea:focus {
+    border-color: var(--pine);
+    box-shadow: 0 0 0 3px rgba(44,83,71,0.14);
+    background: var(--card);
+  }
+
+  .field-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .count { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+  .error { font-size: 13px; color: var(--brick); margin: 10px 0 0; font-weight: 500; }
+
+  .divider { border: none; border-top: 1px dashed var(--line); margin: 24px 0 22px; }
+
+  .filename-group {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--paper);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+
+  .filename-group:focus-within {
+    border-color: var(--pine);
+    box-shadow: 0 0 0 3px rgba(44,83,71,0.14);
+    background: var(--card);
+  }
+
+  .filename-group input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    padding: 13px 14px;
+    font-family: var(--font-mono);
+    font-size: 14.5px;
+    color: var(--ink);
+    outline: none;
+  }
+
+  .filename-group input::placeholder { color: #94978C; }
+
+  .ext-badge {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--muted);
+    background: var(--paper-alt);
+    border-left: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  .actions { display: flex; flex-direction: column; gap: 12px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    font-weight: 600;
+    padding: 13px 20px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active { transform: scale(0.98); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(44,83,71,0.28); }
+
+  .btn-primary { background: var(--pine); color: var(--card); width: 100%; }
+  .btn-primary:hover { background: var(--pine-dark); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    border-color: var(--line);
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+  .btn-ghost:hover { color: var(--brick); border-color: var(--brick); background: rgba(155,59,46,0.05); }
+
+  .btn-download { background: var(--gold); color: var(--ink); width: 100%; }
+  .btn-download:hover { background: var(--gold-dark); }
+
+  .status { display: flex; align-items: center; gap: 12px; padding: 4px 2px 2px; flex-wrap: wrap; }
+
+  .stamp {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pine);
+    border: 1.5px solid var(--pine);
+    border-radius: 5px;
+    padding: 3px 9px;
+    transform: rotate(-5deg);
+    flex-shrink: 0;
+  }
+
+  .stamp-animate { animation: stamp-press 0.42s cubic-bezier(0.2, 1.4, 0.4, 1); }
+
+  .status-text { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); }
+
+  .footnote { text-align: center; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 26px; }
+
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  @keyframes stamp-press {
+    0% { opacity: 0; transform: rotate(-5deg) scale(1.6); }
+    60% { opacity: 1; transform: rotate(-5deg) scale(0.94); }
+    100% { opacity: 1; transform: rotate(-5deg) scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    main.card { animation: none; opacity: 1; transform: none; }
+    .stamp-animate { animation: none; }
+    .btn:active { transform: none; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 40px 14px 48px; }
+    main.card { padding: 24px 18px 22px; }
+    .folder-tab { left: 18px; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="intro">
+      <p class="eyebrow">Plain-text filing desk</p>
+      <h1>Turn your words into a file.</h1>
+      <p class="subhead">Write or paste your text, name it, and download a clean .txt — nothing leaves your browser.</p>
+    </header>
+
+    <main class="card" id="card">
+      <div class="folder-tab">.txt</div>
+
+      <div class="step">
+        <span class="step-index">01</span>
+        <span class="step-label">Write</span>
+      </div>
+      <div class="field">
+        <textarea id="textInput" placeholder="Start typing, or paste your text here…" aria-label="Text to convert"></textarea>
+        <div class="field-footer">
+          <span class="count" id="charCount">0 characters · 0 words</span>
+          <button type="button" class="btn btn-ghost" id="clearBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Clear
+          </button>
+        </div>
+        <p class="error" id="textError" role="alert" hidden>Add some text before filing it.</p>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="step">
+        <span class="step-index">02</span>
+        <span class="step-label">Name it</span>
+      </div>
+      <div class="field">
+        <div class="filename-group">
+          <input type="text" id="filenameInput" placeholder="notes" aria-label="File name" />
+          <span class="ext-badge">.txt</span>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="step">
+        <span class="step-index">03</span>
+        <span class="step-label">Convert</span>
+      </div>
+      <div class="field actions">
+        <button type="button" class="btn btn-primary" id="convertBtn">Convert to .txt</button>
+
+        <div class="status" id="status" aria-live="polite" hidden>
+          <span class="stamp" id="stamp">Filed ✓</span>
+          <span class="status-text" id="statusText"></span>
+        </div>
+
+        <button type="button" class="btn btn-download" id="downloadBtn" hidden>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+          Download .txt
+        </button>
+      </div>
+    </main>
+
+    <p class="footnote">Runs entirely in your browser — no text is uploaded or stored.</p>
+  </div>
+
+<script>
+  (function () {
+    const textInput = document.getElementById('textInput');
+    const clearBtn = document.getElementById('clearBtn');
+    const filenameInput = document.getElementById('filenameInput');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const charCount = document.getElementById('charCount');
+    const textError = document.getElementById('textError');
+    const status = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const stamp = document.getElementById('stamp');
+
+    let fileBlobUrl = null;
+    let currentFileName = '';
+
+    function updateCount() {
+      const text = textInput.value;
+      const chars = text.length;
+      const trimmed = text.trim();
+      const words = trimmed === '' ? 0 : trimmed.split(/\s+/).length;
+      charCount.textContent = chars.toLocaleString() + ' character' + (chars === 1 ? '' : 's') +
+        ' · ' + words.toLocaleString() + ' word' + (words === 1 ? '' : 's');
+    }
+
+    function resetConversionState() {
+      if (fileBlobUrl) {
+        URL.revokeObjectURL(fileBlobUrl);
+        fileBlobUrl = null;
+      }
+      downloadBtn.hidden = true;
+      status.hidden = true;
+    }
+
+    function sanitizeFilename(raw) {
+      let clean = raw.trim().replace(/[\\/:*?"<>|]/g, '');
+      clean = clean.replace(/\.[a-zA-Z0-9]{1,10}$/, '');
+      clean = clean.trim();
+      return clean === '' ? 'untitled' : clean;
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+
+    textInput.addEventListener('input', function () {
+      updateCount();
+      textError.hidden = true;
+      resetConversionState();
+    });
+
+    filenameInput.addEventListener('input', resetConversionState);
+
+    clearBtn.addEventListener('click', function () {
+      textInput.value = '';
+      updateCount();
+      textError.hidden = true;
+      resetConversionState();
+      textInput.focus();
+    });
+
+    convertBtn.addEventListener('click', function () {
+      const text = textInput.value;
+      if (text.trim() === '') {
+        textError.hidden = false;
+        textInput.focus();
+        return;
+      }
+      textError.hidden = true;
+
+      const baseName = sanitizeFilename(filenameInput.value);
+      currentFileName = baseName + '.txt';
+
+      const blob = new Blob([text], { type: 'text/plain' });
+      if (fileBlobUrl) URL.revokeObjectURL(fileBlobUrl);
+      fileBlobUrl = URL.createObjectURL(blob);
+
+      statusText.textContent = 'Filed as ' + currentFileName + ' · ' + formatBytes(blob.size);
+      status.hidden = false;
+      downloadBtn.hidden = false;
+
+      stamp.classList.remove('stamp-animate');
+      void stamp.offsetWidth;
+      stamp.classList.add('stamp-animate');
+    });
+
+    downloadBtn.addEventListener('click', function () {
+      if (!fileBlobUrl) return;
+      const a = document.createElement('a');
+      a.href = fileBlobUrl;
+      a.download = currentFileName || 'untitled.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    updateCount();
+  })();
+</script>
+</body>
+</html>
