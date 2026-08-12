@@ -100,7 +100,8 @@
     text-transform: uppercase;
   }
 
-  .step { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+  .step { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .step-left { display: flex; align-items: center; gap: 9px; }
 
   .step-index {
     display: inline-flex;
@@ -292,15 +293,22 @@
     <header class="intro">
       <p class="eyebrow">Plain-text filing desk</p>
       <h1>Turn your words into a file.</h1>
-      <p class="subhead">Write or paste your text, name it, and download a clean .txt — nothing leaves your browser.</p>
+      <p class="subhead">Write, paste, or open a .txt file to edit — then download a clean copy. Nothing leaves your browser.</p>
     </header>
 
     <main class="card" id="card">
       <div class="folder-tab">.txt</div>
 
       <div class="step">
-        <span class="step-index">01</span>
-        <span class="step-label">Write</span>
+        <div class="step-left">
+          <span class="step-index">01</span>
+          <span class="step-label">Write</span>
+        </div>
+        <button type="button" class="btn btn-ghost" id="openBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 19h16"/></svg>
+          Open .txt file
+        </button>
+        <input type="file" id="fileInput" accept=".txt,text/plain" aria-label="Open a .txt file" hidden />
       </div>
       <div class="field">
         <textarea id="textInput" placeholder="Start typing, or paste your text here…" aria-label="Text to convert"></textarea>
@@ -317,8 +325,10 @@
       <hr class="divider" />
 
       <div class="step">
-        <span class="step-index">02</span>
-        <span class="step-label">Name it</span>
+        <div class="step-left">
+          <span class="step-index">02</span>
+          <span class="step-label">Name it</span>
+        </div>
       </div>
       <div class="field">
         <div class="filename-group">
@@ -330,8 +340,10 @@
       <hr class="divider" />
 
       <div class="step">
-        <span class="step-index">03</span>
-        <span class="step-label">Convert</span>
+        <div class="step-left">
+          <span class="step-index">03</span>
+          <span class="step-label">Convert</span>
+        </div>
       </div>
       <div class="field actions">
         <button type="button" class="btn btn-primary" id="convertBtn">Convert to .txt</button>
@@ -363,6 +375,11 @@
     const status = document.getElementById('status');
     const statusText = document.getElementById('statusText');
     const stamp = document.getElementById('stamp');
+    const openBtn = document.getElementById('openBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    const EMPTY_TEXT_MSG = 'Add some text before filing it.';
+    const FILE_READ_MSG = 'Could not read that file — try a plain .txt file.';
 
     let fileBlobUrl = null;
     let currentFileName = '';
@@ -416,6 +433,7 @@
     convertBtn.addEventListener('click', function () {
       const text = textInput.value;
       if (text.trim() === '') {
+        textError.textContent = EMPTY_TEXT_MSG;
         textError.hidden = false;
         textInput.focus();
         return;
@@ -446,6 +464,43 @@
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+    });
+
+    openBtn.addEventListener('click', function () {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function () {
+      const file = fileInput.files && fileInput.files[0];
+      fileInput.value = '';
+      if (!file) return;
+
+      function loadFile() {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          textInput.value = e.target.result;
+          updateCount();
+          textError.hidden = true;
+          resetConversionState();
+          if (filenameInput.value.trim() === '') {
+            filenameInput.value = file.name.replace(/\.[a-zA-Z0-9]{1,10}$/, '');
+          }
+          textInput.focus();
+        };
+        reader.onerror = function () {
+          textError.textContent = FILE_READ_MSG;
+          textError.hidden = false;
+        };
+        reader.readAsText(file);
+      }
+
+      if (textInput.value.trim() !== '') {
+        if (window.confirm('Replace the current text with "' + file.name + '"?')) {
+          loadFile();
+        }
+      } else {
+        loadFile();
+      }
     });
 
     updateCount();
